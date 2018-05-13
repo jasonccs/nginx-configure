@@ -6,7 +6,6 @@ server {
 
         root /www/hsdcw.cn;
 
-
 	 	#ssl 证书
 	   	ssl_certificate       /usr/local/nginx/ssl/www.hsdcw.cn.crt;
 	    ssl_certificate_key   /usr/local/nginx/ssl/www.hsdcw.cn.key; 
