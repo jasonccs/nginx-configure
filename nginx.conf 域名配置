@@ -1,0 +1,73 @@
+server {
+        listen 80 ;
+        listen  443 ssl;
+
+        server_name  www.hsdcw.cn   hsdcw.cn;
+
+        root /www/hsdcw.cn;
+
+
+	 	#ssl 证书
+	   	ssl_certificate       /usr/local/nginx/ssl/www.hsdcw.cn.crt;
+	    ssl_certificate_key   /usr/local/nginx/ssl/www.hsdcw.cn.key; 
+	    #keepalive_timeout      70;
+
+		add_header Strict-Transport-Security "max-age=6307200; includeSubdomains; preload";
+		add_header X-Frame-Options DENY;
+		add_header X-Content-Type-Options nosniff;
+
+	   	ssl_session_timeout  10m;  #SSL session过期时间
+
+	    ssl_prefer_server_ciphers on;  #由服务器协商最佳的加密算法
+
+		ssl_session_cache builtin:1000 shared:SSL:10m;       #Session Cache，将Session缓存到服务器，这可能会占用更多的服务器资源
+
+		ssl_session_tickets on; #开启浏览器的Session Ticket缓存
+		
+		ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+
+		ssl_ciphers EECDH+CHACHA20:EECDH+CHACHA20-draft:EECDH+AES128:RSA+AES128:EECDH+AES256:RSA+AES256:EECDH+3DES:RSA+3DES:!MD5; #加密套件,这里用了CloudFlare's Internet facing SSL cipher configuration
+
+	        
+		ssl_stapling on;  #OCSP Stapling开启,OCSP是用于在线查询证书吊销情况的服务，使用OCSP Stapling能将证书有效状态的信息缓存到服务器，提高TLS握手速度
+
+		ssl_stapling_verify on; #OCSP Stapling验证开启
+		   
+		#ssl_dhparam /usr/lcoal/nginx/ssl/dhparam.pem; #DH-Key交换密钥文件位置
+
+		resolver 8.8.8.8 8.8.4.4 valid=300s;
+		resolver_timeout 5s;	
+
+		#fastcgi_param   HTTPS               on;
+	        #fastcgi_param   HTTP_SCHEME         https;
+		
+		if ($ssl_protocol = "") { rewrite ^ https://$server_name$request_uri? permanent; }
+
+	        error_page   500 502 503 504  /50x.html;
+	        location = /50x.html {
+	            root   /usr/share/nginx/html;
+	        }
+
+
+	        location / {
+	            
+		    if (!-e $request_filename){
+	                   rewrite ^/(.*)$ /index.php/$1 last;
+	             }   #去掉index.php  
+			
+
+	            try_files $uri $uri/ /index.php?$query_string; #针对laravel 项目部署
+	            index  index.html index.htm index.php;
+	            #autoindex  on;
+	        }
+	        location ~ \.php(.*)$ {
+	            fastcgi_pass   127.0.0.1:9000;
+	            fastcgi_index  index.php;
+	            fastcgi_split_path_info  ^((?U).+\.php)(/?.+)$;
+	            fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+	            fastcgi_param  PATH_INFO  $fastcgi_path_info;
+	            fastcgi_param  PATH_TRANSLATED  $document_root$fastcgi_path_info;
+		    	add_header X-Frame-Options SAMEORIGIN; //开启相同的域名 ifram 的嵌入 
+	            include        fastcgi_params;
+	        }
+}
